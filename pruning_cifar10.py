@@ -21,7 +21,7 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(description='Trains ResNeXt on CIFAR or ImageNet',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data_path', type=str, default = './data',help='Path to dataset')
+parser.add_argument('--data_path', type=str, default = '/home/st2/Model_Compression',help='Path to dataset')
 parser.add_argument('--dataset', type=str, default = 'cifar10',choices=['cifar10', 'cifar100', 'imagenet', 'svhn', 'stl10'],
                     help='Choose between Cifar10/100 and ImageNet.')
 parser.add_argument('--arch', metavar='ARCH', default='resnet20', choices=model_names,
@@ -43,7 +43,7 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N', help='manual epoch number (useful on restarts)')
 parser.add_argument('--evaluate', dest='evaluate', action='store_true', help='evaluate model on validation set')
 # Acceleration
-parser.add_argument('--ngpu', type=int, default=2, help='0 = CPU.')
+parser.add_argument('--ngpu', type=int, default=1, help='0 = CPU.')
 parser.add_argument('--workers', type=int, default=2, help='number of data loading workers (default: 2)')
 # random seed
 parser.add_argument('--manualSeed', type=int, help='manual seed')
@@ -382,7 +382,7 @@ def inference(train_loader, model):
     model.eval()
     with torch.no_grad():
         for i, (input, target) in enumerate(train_loader):
-            if (i > args.limit):
+            if (i >= args.limit):
                 break
             if args.use_cuda:
                 target = target.cuda(non_blocking=True)
@@ -510,13 +510,13 @@ class Mask:
         if len(weight_torch.size()) == 4:  
             similar_pruned_num = int(weight_torch.size()[0] * distance_rate)
             #weight_vec = weight_torch.view(weight_torch.size()[0], -1)
-            num_batch_prun = len(feature_out_hook_conv)
+            num_batch_prune = len(feature_out_hook_conv)
             bs = feature_out_hook_conv[0].shape[0]
             channel = feature_out_hook_conv[0].shape[1]
             w = feature_out_hook_conv[0].shape[2]
             a = math.ceil(w/4)
             distance_final = torch.zeros(channel)
-            for i in range(num_batch_prun):
+            for i in range(num_batch_prune):
                 distance_all = []
                 for j in range(bs):
                     feature_out_hook_conv1 = feature_out_hook_conv[i][j]
@@ -535,7 +535,7 @@ class Mask:
                 distance_all = distance_all.view(bs,-1).float()
                 distance_all = distance_all.sum(0)
                 distance_final = distance_final.float() + distance_all
-            distance_final = distance_final/num_batch_prun
+            distance_final = distance_final/num_batch_prune
             distance_final = distance_final.numpy()
             filter_small_index = []
             filter_large_index = []
